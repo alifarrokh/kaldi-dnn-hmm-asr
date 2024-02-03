@@ -25,6 +25,10 @@ test_dir=data/test # test metadata will be stored here
 exps_dir=exp # models, logs, etc. will be stored here
 feats_mfcc_dir=mfcc # extracted MFCC features will be stored here
 
+# Context-independent (Monophone) HMM
+mono_gaussians=200 # number of gaussians
+mono_iters=40 # number of training iterations
+
 
 # =============================================
 # [STAGE 1] Prepare Language Files
@@ -91,4 +95,26 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 
     steps/compute_cmvn_stats.sh $train_dir $exps_dir/make_mfcc/data/train $feats_mfcc_dir
     steps/compute_cmvn_stats.sh $test_dir $exps_dir/make_mfcc/data/test $feats_mfcc_dir
+fi
+
+
+# =============================================
+# [STAGE 4] Train Context-independent (Monophone) HMM
+# =============================================
+mono_dir=$exps_dir/mono
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    echo "[STAGE 4] Training mono HMM ..."
+    mkdir $mono_dir
+
+    # Train the model
+    steps/train_mono.sh  --nj $n_jobs --cmd $kaldi_cmd \
+        --totgauss $mono_gaussians --num_iters $mono_iters \
+        $train_dir $lang_dir $mono_dir
+
+    # Create the decoding graph
+    utils/mkgraph.sh $lang_dir $mono_dir $mono_dir/graph
+
+    # Decode & evaluate
+    steps/decode.sh --nj $n_jobs --cmd $kaldi_cmd \
+        $mono_dir/graph $test_dir $mono_dir/decode_test
 fi
