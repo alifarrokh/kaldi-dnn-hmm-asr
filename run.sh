@@ -58,7 +58,7 @@ fi
 # [STAGE 2] Prepare Dataset
 # =============================================
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    echo "[STAGE 1] Preparing dataset subsets ..."
+    echo "[STAGE 2] Preparing dataset subsets ..."
     mkdir -p $train_dir $test_dir
 
     # Train subset
@@ -83,8 +83,8 @@ fi
 # [STAGE 3] Feature Extraction (MFCC)
 # =============================================
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    echo "[STAGE 1] Extracting MFCC features ..."
-    mkdir -p $feats_mfcc_dir/train $feats_mfcc_dir/test
+    echo "[STAGE 3] Extracting MFCC features ..."
+    mkdir -p $exps_dir $feats_mfcc_dir/train $feats_mfcc_dir/test
 
     steps/make_mfcc.sh --cmd $kaldi_cmd --nj $n_jobs $train_dir $exps_dir/make_mfcc/data/train $feats_mfcc_dir
     steps/make_mfcc.sh --cmd $kaldi_cmd --nj $n_jobs $test_dir $exps_dir/make_mfcc/data/test $feats_mfcc_dir
