@@ -77,3 +77,18 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     utils/utt2spk_to_spk2utt.pl $test_dir/utt2spk > $test_dir/spk2utt
     utils/fix_data_dir.sh $test_dir
 fi
+
+
+# =============================================
+# [STAGE 3] Feature Extraction (MFCC)
+# =============================================
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+    echo "[STAGE 1] Extracting MFCC features ..."
+    mkdir -p $feats_mfcc_dir/train $feats_mfcc_dir/test
+
+    steps/make_mfcc.sh --cmd $kaldi_cmd --nj $n_jobs $train_dir $exps_dir/make_mfcc/data/train $feats_mfcc_dir
+    steps/make_mfcc.sh --cmd $kaldi_cmd --nj $n_jobs $test_dir $exps_dir/make_mfcc/data/test $feats_mfcc_dir
+
+    steps/compute_cmvn_stats.sh $train_dir $exps_dir/make_mfcc/data/train $feats_mfcc_dir
+    steps/compute_cmvn_stats.sh $test_dir $exps_dir/make_mfcc/data/test $feats_mfcc_dir
+fi
