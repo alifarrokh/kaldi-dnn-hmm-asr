@@ -1,7 +1,19 @@
 #!/bin/bash
 # Copyright (c) 2024 Seyed Ali Farokh
 
-stage=-1
+
+verify_stage() {
+    if [[ ! "$1" =~ ^[0-9]+$ || $1 -lt 1 || $1 -gt 7 ]]; then
+        echo "Error: The $2 argument should be an integer in range 1-7." && exit
+    fi
+}
+
+verify_stage "$1" "stage"
+verify_stage "$2" "stop_stage"
+
+stage=$1
+stop_stage=$2
+
 
 # =============================================
 # Configuration
