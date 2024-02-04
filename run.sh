@@ -10,6 +10,7 @@ stage=-1
 kaldi_root="../../"
 kaldi_cmd=utils/run.pl
 n_jobs=10
+n_dnn_threads=4
 
 # Dataset
 train_list=dataset/train.txt # tab-separated train metadata
@@ -33,6 +34,12 @@ mono_iters=40 # number of training iterations
 # Context-dependent (Triphone) HMM
 tri_states=1000
 tri_gaussians=5000
+
+# Hybrid DNN-HMM
+dnn_hidden_layers=3
+dnn_hidden_dim=300 # hidden dimension
+dnn_epochs=15 # training epochs
+dnn_batch_size=128
 
 
 # =============================================
@@ -170,4 +177,32 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         $test_dir $exps_dir/make_fbank/test $feats_fbank_dir/test
     steps/compute_cmvn_stats.sh $test_dir \
         $exps_dir/make_fbank/test $feats_fbank_dir/test
+fi
+
+
+# =============================================
+# [STAGE 7] Train DNN-HMM
+# =============================================
+dnn_dir=$exps_dir/dnn
+tri_dir_align=$exps_dir/tri_ali
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    echo "[STAGE 7] Training DNN-HMM ..."
+    mkdir -p $dnn_dir $tri_dir_align
+
+    # Align triphone states to training samples
+    steps/align_si.sh --nj $nj --cmd $kaldi_cmd \
+        $train_dir $lang_dir $tri_dir $tri_dir_align
+
+    # Train the model
+    steps/nnet2/train_tanh_fast.sh --num-jobs-nnet $n_jobs --num-threads $n_dnn_threads \
+        --num-hidden-layers $dnn_hidden_layers \
+        --hidden-layer-dim $dnn_hidden_layers \
+        --add-layers-period 2 \
+        --num-epochs $dnn_epochs \
+        --minibatch-size $dnn_batch_size \
+        $train_dir $lang_dir $tri_dir_align $dnn_dir
+
+    # Decode & evaluate
+    steps/nnet2/decode.sh --nj $n_jobs --cmd $kaldi_cmd
+        $tri_dir/graph $test_dir $dnn_dir/decode_test
 fi
