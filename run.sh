@@ -29,6 +29,10 @@ feats_mfcc_dir=mfcc # extracted MFCC features will be stored here
 mono_gaussians=200 # number of gaussians
 mono_iters=40 # number of training iterations
 
+# Context-dependent (Triphone) HMM
+tri_states=1000
+tri_gaussians=5000
+
 
 # =============================================
 # [STAGE 1] Prepare Language Files
@@ -117,4 +121,31 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Decode & evaluate
     steps/decode.sh --nj $n_jobs --cmd $kaldi_cmd \
         $mono_dir/graph $test_dir $mono_dir/decode_test
+fi
+
+
+# =============================================
+# [STAGE 5] Train Context-dependent (Triphone) HMM
+# =============================================
+tri_dir=$exps_dir/tri
+mono_dir_align=$exps_dir/mono_ali
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+    echo "[STAGE 5] Training triphone HMM ..."
+    mkdir $tri_dir $mono_dir_align
+
+    # Align monophone states to training samples
+    steps/align_si.sh --nj $n_jobs --cmd $kaldi_cmd \
+        $train_dir $lang_dir $mono_dir $mono_dir_align
+
+    # Train the model
+    steps/train_deltas.sh --nj $n_jobs --cmd $kaldi_cmd \
+        $tri_states $tri_gaussians \
+        $train_dir $lang_dir $mono_dir_align $tri_dir
+
+    # Create the decoding graph
+    utils/mkgraph.sh $lang_dir $tri_dir $tri_dir/graph
+
+    # Decode & evaluate
+    steps/decode.sh --nj $n_jobs --cmd $kaldi_cmd \
+        $tri_dir/graph $test_dir $tri_dir/decode_test
 fi
