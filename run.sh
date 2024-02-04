@@ -24,6 +24,7 @@ train_dir=data/train # train metadata will be stored here
 test_dir=data/test # test metadata will be stored here
 exps_dir=exp # models, logs, etc. will be stored here
 feats_mfcc_dir=mfcc # extracted MFCC features will be stored here
+feats_fbank_dir=fbank # extracted mel features will be stored here
 
 # Context-independent (Monophone) HMM
 mono_gaussians=200 # number of gaussians
@@ -148,4 +149,25 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Decode & evaluate
     steps/decode.sh --nj $n_jobs --cmd $kaldi_cmd \
         $tri_dir/graph $test_dir $tri_dir/decode_test
+fi
+
+
+# =============================================
+# [STAGE 6] Extract FBank Features
+# =============================================
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+    echo "[STAGE 6] Extracting mel features ..."
+    mkdir -p $feats_fbank_dir/train $feats_fbank_dir/test
+
+    # Train subset
+    steps/make_fbank.sh --nj $n_jobs --cmd $kaldi_cmd \
+        $train_dir $exps_dir/make_fbank/train $feats_fbank_dir/train
+    steps/compute_cmvn_stats.sh $train_dir \
+        $exps_dir/make_fbank/train $feats_fbank_dir/train
+
+    # Test subset
+    steps/make_fbank.sh --nj $n_jobs --cmd $kaldi_cmd \
+        $test_dir $exps_dir/make_fbank/test $feats_fbank_dir/test
+    steps/compute_cmvn_stats.sh $test_dir \
+        $exps_dir/make_fbank/test $feats_fbank_dir/test
 fi
